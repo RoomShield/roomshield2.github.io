@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Watch.ytb</title>
+    <style>
+        #video-container {
+            text-align: center;
+            position: relative;
+        }
+
+        .video-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        iframe {
+            width: 560px;
+            height: 315px;
+            border: 2px solid rgb(67, 175, 215);
+        }
+
+        #search-results {
+            list-style: none;
+            padding: 0;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 150%;
+        }
+
+        #search-results li {
+            margin-bottom: 20px;
+        }
+
+        #pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #pagination button {
+            margin: 0 5px;
+            border-radius: 60px;
+            background-color: aqua;
+            border: 2px solid rgb(0, 0, 0);
+        }
+
+        /* Style pour le bouton Plein écran */
+        .fullscreen-button {
+            background-color: black; /* Fond noir */
+            color: white; /* Texte en blanc */
+            border: none; /* Pas de bordure */
+            padding: 10px 20px; /* Marge intérieure */
+            cursor: pointer;
+            border-radius: 60px;
+            border: 2px solid rgb(255, 255, 255);
+        }
+
+        #exit-fullscreen-button {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            display: none;
+            z-index: 1;
+        }
+
+        .video-container {
+            position: relative;
+        }
+
+        body {
+            background-color: rgb(35, 35, 35);
+            background-image: url('https://s2.best-wallpaper.net/wallpaper/1366x768/1807/Forest-trees-river-nature-landscape-art-picture_1366x768.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recherche YouTube</h1>
+    <p>Rechercher des vidéos YouTube :</p>
+    <input type="text" id="search-query" placeholder="Terme de recherche">
+    <button onclick="effectuerRecherche()">Rechercher</button>
+    <div id="search-results"></div>
+    <div id="pagination">
+        <button onclick="pagePrecedente()" disabled>Page précédente</button>
+        <button onclick="pageSuivante()" disabled>Page suivante</button>
+    </div>
+
+    <script>
+        let nextPageToken = '';
+        let prevPageToken = '';
+        let currentVideoId = '';
+
+        function effectuerRecherche() {
+            const query = document.getElementById('search-query').value;
+            const searchResults = document.getElementById('search-results');
+
+            // Requête à l'API YouTube pour rechercher des vidéos
+            const apiKey = 'AIzaSyDTdYIJP24R-IjMgu4yn11okQvbqAQQS_Q';
+            const maxResults = 10;
+            const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=video&q=${query}&maxResults=${maxResults}&pageToken=${nextPageToken}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Effacer les résultats précédents
+                    searchResults.innerHTML = '';
+
+                    // Parcourir les résultats et afficher les vidéos
+                    data.items.forEach(item => {
+                        const videoId = item.id.videoId;
+                        const videoTitle = item.snippet.title;
+
+                        const videoItem = document.createElement('div');
+                        videoItem.classList.add('video-item');
+
+                        const iframe = document.createElement('iframe');
+                        iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                        iframe.frameborder = '0';
+                        iframe.allowfullscreen = true;
+
+                        const title = document.createElement('p');
+                        title.textContent = videoTitle;
+
+                        const fullscreenButton = document.createElement('button');
+                        fullscreenButton.textContent = 'Plein écran';
+                        fullscreenButton.classList.add('fullscreen-button'); // Ajout de la classe pour le style
+                        fullscreenButton.onclick = function () {
+                            passerEnPleinEcran(iframe);
+                        };
+
+                        videoItem.appendChild(iframe);
+                        videoItem.appendChild(title);
+                        videoItem.appendChild(fullscreenButton);
+
+                        searchResults.appendChild(videoItem);
+                    });
+
+                    nextPageToken = data.nextPageToken;
+                    prevPageToken = data.prevPageToken;
+
+                    // Activer/désactiver les boutons de pagination en fonction des tokens
+                    const pagePrecedenteButton = document.querySelector('#pagination button:nth-child(1)');
+                    const pageSuivanteButton = document.querySelector('#pagination button:nth-child(2)');
+                    pagePrecedenteButton.disabled = !prevPageToken;
+                    pageSuivanteButton.disabled = !nextPageToken;
+
+                    // Cacher le bouton plein écran s'il n'y a pas de vidéo
+                    if (data.items.length > 0) {
+                        document.querySelectorAll('.fullscreen-button').forEach(button => {
+                            button.style.display = 'block';
+                        });
+                    } else {
+                        document.querySelectorAll('.fullscreen-button').forEach(button => {
+                            button.style.display = 'none';
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur de recherche:', error);
+                });
+        }
+
+        function pagePrecedente() {
+            if (prevPageToken) {
+                nextPageToken = '';
+                effectuerRecherche();
+            }
+        }
+
+        function pageSuivante() {
+            if (nextPageToken) {
+                prevPageToken = '';
+                effectuerRecherche();
+            }
+        }
+
+        function passerEnPleinEcran(iframe) {
+            if (iframe) {
+                if (iframe.requestFullscreen) {
+                    iframe.requestFullscreen();
+                } else if (iframe.mozRequestFullScreen) {
+                    iframe.mozRequestFullScreen();
+                } else if (iframe.webkitRequestFullscreen) {
+                    iframe.webkitRequestFullscreen();
+                }
+            }
+        }
+
+        function quitterPleinEcran() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', exitFullscreenHandler);
+        document.addEventListener('webkitfullscreenchange', exitFullscreenHandler);
+        document.addEventListener('mozfullscreenchange', exitFullscreenHandler);
+
+        function exitFullscreenHandler() {
+            const exitButton = document.getElementById('exit-fullscreen-button');
+            if (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement) {
+                // La vidéo est en plein écran, afficher le bouton "Quitter le plein écran"
+                exitButton.style.display = 'block';
+            } else {
+                // La vidéo n'est pas en plein écran, masquer le bouton "Quitter le plein écran"
+                exitButton.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
